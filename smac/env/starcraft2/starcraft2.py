@@ -70,12 +70,15 @@ class StarCraft2Env(MultiAgentEnv):
         game_version=None,
         seed=None,
         continuing_episode=False,
+        sight_range=9,
         obs_all_health=True,
         obs_own_health=True,
         obs_last_action=False,
         obs_pathing_grid=False,
         obs_terrain_height=False,
         obs_instead_of_state=False,
+        obs_bool_team=False,
+        obs_own_position=False,
         obs_timestep_number=False,
         state_last_action=True,
         state_timestep_number=False,
@@ -118,6 +121,8 @@ class StarCraft2Env(MultiAgentEnv):
         continuing_episode : bool, optional
             Whether to consider episodes continuing or finished after time
             limit is reached (default is False).
+        sight_range = int, optional
+            Define the unit sight of range. (default is 9).
         obs_all_health : bool, optional
             Agents receive the health of all units (in the sight range) as part
             of observations (default is True).
@@ -136,6 +141,13 @@ class StarCraft2Env(MultiAgentEnv):
         obs_instead_of_state : bool, optional
             Use combination of all agents' observations as the global state
             (default is False).
+        obs_bool_team : bool, optional
+            Whether observations include which team the agent is part of
+            as a one host encoding vector.
+            (default is False)
+        obs_own_position: bool, optional
+            Whether observations include the position of the agent.
+            (default is False)
         obs_timestep_number : bool, optional
             Whether observations include the current timestep of the episode
             (default is False).
@@ -208,6 +220,8 @@ class StarCraft2Env(MultiAgentEnv):
         self.obs_last_action = obs_last_action
         self.obs_pathing_grid = obs_pathing_grid
         self.obs_terrain_height = obs_terrain_height
+        self.obs_bool_team = obs_bool_team
+        self.obs_own_position = obs_own_position
         self.obs_timestep_number = obs_timestep_number
         self.state_last_action = state_last_action
         self.state_timestep_number = state_timestep_number
@@ -227,6 +241,7 @@ class StarCraft2Env(MultiAgentEnv):
         self.reward_scale_rate = reward_scale_rate
 
         # Other
+        self.sight_range = sight_range
         self.game_version = game_version
         self.continuing_episode = continuing_episode
         self._seed = seed
@@ -735,7 +750,7 @@ class StarCraft2Env(MultiAgentEnv):
 
     def unit_sight_range(self, agent_id):
         """Returns the sight range for an agent."""
-        return 9
+        return self.sight_range
 
     def unit_max_cooldown(self, unit):
         """Returns the maximal cooldown for a unit."""
@@ -982,6 +997,15 @@ class StarCraft2Env(MultiAgentEnv):
                 type_id = self.get_unit_type_id(unit, True)
                 own_feats[ind + type_id] = 1
 
+            if self.obs_bool_team:
+                own_feats[ind] = 1
+                ind += 2
+
+            if self.obs_own_position:
+                own_feats[ind] = (x - (self.map_x / 2)) / self.max_distance_x  # relative X
+                own_feats[ind + 1] = (y - (self.map_y / 2)) / self.max_distance_y  # relative Y
+                ind += 2
+
         agent_obs = np.concatenate(
             (
                 move_feats.flatten(),
@@ -1148,6 +1172,10 @@ class StarCraft2Env(MultiAgentEnv):
             own_feats += 1 + self.shield_bits_ally
         if self.obs_timestep_number:
             own_feats += 1
+        if self.obs_bool_team:
+            own_feats += 2
+        if self.obs_own_position:
+            own_feats += 2
 
         return own_feats
 
