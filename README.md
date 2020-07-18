@@ -21,14 +21,14 @@ Data from the runs used in the paper is included [here](https://github.com/oxwhi
 You can install SMAC by using the following command:
 
 ```shell
-$ pip install git+https://github.com/oxwhirl/smac.git
+$ pip install git+https://github.com/vivh3/smac-multi.git
 ```
 
 Alternatively, you can clone the SMAC repository and then install `smac` with its dependencies:
 
 ```shell
-$ git clone https://github.com/oxwhirl/smac.git
-$ pip install smac/
+$ git clone https://github.com/vivh3/smac-multi/
+$ pip install smac-multi/
 ```
 
 You may also need to upgrade pip: `pip install --upgrade pip` for the install to work.
@@ -74,7 +74,7 @@ Users can extend SMAC by adding new maps/scenarios. To this end, one needs to:
 Please run the following command to make sure that `smac` and its maps are properly installed. 
 
 ```bash
-$ python -m smac.examples.random_agents
+$ python -m smac.examples.random_agents_multi
 ```
 
 ## Watch a replay
@@ -112,52 +112,3 @@ In BibTeX format:
   year = {2019},
 }
 ```
-
-# Code Example
-
-Below is a small code example which illustrates how SMAC can be used. Here, individual agents execute random policies after receiving the observations and global state from the environment.  
-
-If you want to try the state-of-the-art algorithms (such as [QMIX](https://arxiv.org/abs/1803.11485) and [COMA](https://arxiv.org/abs/1705.08926)) on SMAC, make use of [PyMARL](https://github.com/oxwhirl/smac) - our framework for MARL research.
-
-```python
-from smac.env import StarCraft2Env
-import numpy as np
-
-
-def main():
-    env = StarCraft2Env(map_name="8m")
-    env_info = env.get_env_info()
-
-    n_actions = env_info["n_actions"]
-    n_agents = env_info["n_agents"]
-
-    n_episodes = 10
-
-    for e in range(n_episodes):
-        env.reset()
-        terminated = False
-        episode_reward = 0
-
-        while not terminated:
-            obs = env.get_obs()
-            state = env.get_state()
-
-            actions = []
-            for agent_id in range(n_agents):
-                avail_actions = env.get_avail_agent_actions(agent_id)
-                avail_actions_ind = np.nonzero(avail_actions)[0]
-                action = np.random.choice(avail_actions_ind)
-                actions.append(action)
-
-            reward, terminated, _ = env.step(actions)
-            episode_reward += reward
-
-        print("Total reward in episode {} = {}".format(e, episode_reward))
-
-    env.close()
-
-```
-
-# RLlib Examples
-
-You can also run SMAC environments in [RLlib](https://rllib.io), which includes scalable algorithms such as [PPO](https://ray.readthedocs.io/en/latest/rllib-algorithms.html#proximal-policy-optimization-ppo) and [IMPALA](https://ray.readthedocs.io/en/latest/rllib-algorithms.html#importance-weighted-actor-learner-architecture-impala). Check out the [example code](https://github.com/oxwhirl/smac/tree/master/smac/examples/rllib).
