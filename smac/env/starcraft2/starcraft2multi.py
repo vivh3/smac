@@ -914,7 +914,7 @@ class StarCraft2EnvMulti(StarCraft2Env):
         if self.state_timestep_number:
             size += 1
 
-        return size
+        return 2, size
 
     def get_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id."""
