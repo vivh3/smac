@@ -195,6 +195,10 @@ class StarCraft2EnvMulti(StarCraft2Env):
         except:
             self.full_restart()
 
+    def setup_heuristic(self, team_1: bool, team_2: bool):
+        self.team_1_heuristic = team_1
+        self.team_2_heuristic = team_2
+
     def step(self, actions):
         actions_int = [int(a) for a in actions]
 
@@ -973,6 +977,14 @@ class StarCraft2EnvMulti(StarCraft2Env):
             avail_agent = self.get_avail_agent_actions(agent_id)
             avail_actions.append(avail_agent)
         return avail_actions
+
+    def save_replay(self):
+        """Save a replay."""
+        prefix = self.replay_prefix or self.map_name
+        replay_dir = self.replay_dir or ""
+        replay_path = self._run_config.save_replay(
+            self._controller[0].save_replay(), replay_dir=replay_dir, prefix=prefix)
+        logging.info("Replay saved at: %s" % replay_path)
 
     def close(self):
         """Close StarCraft II."""
