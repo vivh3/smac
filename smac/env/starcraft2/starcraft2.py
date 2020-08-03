@@ -1038,106 +1038,106 @@ class StarCraft2Env(MultiAgentEnv):
         agents_obs = [self.get_obs_agent(i) for i in range(self.n_agents)]
         return agents_obs
 
-    def get_state(self):
-        """Returns the global state.
-        NOTE: This functon should not be used during decentralised execution.
-        """
-        if self.obs_instead_of_state:
-            obs_concat = np.concatenate(self.get_obs(), axis=0).astype(
-                np.float32
-            )
-            return obs_concat
+    # def get_state(self):
+    #     """Returns the global state.
+    #     NOTE: This functon should not be used during decentralised execution.
+    #     """
+    #     if self.obs_instead_of_state:
+    #         obs_concat = np.concatenate(self.get_obs(), axis=0).astype(
+    #             np.float32
+    #         )
+    #         return obs_concat
 
-        nf_al = 4 + self.shield_bits_ally + self.unit_type_bits
-        nf_en = 3 + self.shield_bits_enemy + self.unit_type_bits
+    #     nf_al = 4 + self.shield_bits_ally + self.unit_type_bits
+    #     nf_en = 3 + self.shield_bits_enemy + self.unit_type_bits
 
-        ally_state = np.zeros((self.n_agents, nf_al))
-        enemy_state = np.zeros((self.n_enemies, nf_en))
+    #     ally_state = np.zeros((self.n_agents, nf_al))
+    #     enemy_state = np.zeros((self.n_enemies, nf_en))
 
-        center_x = self.map_x / 2
-        center_y = self.map_y / 2
+    #     center_x = self.map_x / 2
+    #     center_y = self.map_y / 2
 
-        for al_id, al_unit in self.agents.items():
-            if al_unit.health > 0:
-                x = al_unit.pos.x
-                y = al_unit.pos.y
-                max_cd = self.unit_max_cooldown(al_unit)
+    #     for al_id, al_unit in self.agents.items():
+    #         if al_unit.health > 0:
+    #             x = al_unit.pos.x
+    #             y = al_unit.pos.y
+    #             max_cd = self.unit_max_cooldown(al_unit)
 
-                ally_state[al_id, 0] = (
-                    al_unit.health / al_unit.health_max
-                )  # health
-                if (
-                    self.map_type == "MMM"
-                    and al_unit.unit_type == self.medivac_id
-                ):
-                    ally_state[al_id, 1] = al_unit.energy / max_cd  # energy
-                else:
-                    ally_state[al_id, 1] = (
-                        al_unit.weapon_cooldown / max_cd
-                    )  # cooldown
-                ally_state[al_id, 2] = (
-                    x - center_x
-                ) / self.max_distance_x  # relative X
-                ally_state[al_id, 3] = (
-                    y - center_y
-                ) / self.max_distance_y  # relative Y
+    #             ally_state[al_id, 0] = (
+    #                 al_unit.health / al_unit.health_max
+    #             )  # health
+    #             if (
+    #                 self.map_type == "MMM"
+    #                 and al_unit.unit_type == self.medivac_id
+    #             ):
+    #                 ally_state[al_id, 1] = al_unit.energy / max_cd  # energy
+    #             else:
+    #                 ally_state[al_id, 1] = (
+    #                     al_unit.weapon_cooldown / max_cd
+    #                 )  # cooldown
+    #             ally_state[al_id, 2] = (
+    #                 x - center_x
+    #             ) / self.max_distance_x  # relative X
+    #             ally_state[al_id, 3] = (
+    #                 y - center_y
+    #             ) / self.max_distance_y  # relative Y
 
-                ind = 4
-                if self.shield_bits_ally > 0:
-                    max_shield = self.unit_max_shield(al_unit)
-                    ally_state[al_id, ind] = (
-                        al_unit.shield / max_shield
-                    )  # shield
-                    ind += 1
+    #             ind = 4
+    #             if self.shield_bits_ally > 0:
+    #                 max_shield = self.unit_max_shield(al_unit)
+    #                 ally_state[al_id, ind] = (
+    #                     al_unit.shield / max_shield
+    #                 )  # shield
+    #                 ind += 1
 
-                if self.unit_type_bits > 0:
-                    type_id = self.get_unit_type_id(al_unit, True)
-                    ally_state[al_id, ind + type_id] = 1
+    #             if self.unit_type_bits > 0:
+    #                 type_id = self.get_unit_type_id(al_unit, True)
+    #                 ally_state[al_id, ind + type_id] = 1
 
-        for e_id, e_unit in self.enemies.items():
-            if e_unit.health > 0:
-                x = e_unit.pos.x
-                y = e_unit.pos.y
+    #     for e_id, e_unit in self.enemies.items():
+    #         if e_unit.health > 0:
+    #             x = e_unit.pos.x
+    #             y = e_unit.pos.y
 
-                enemy_state[e_id, 0] = (
-                    e_unit.health / e_unit.health_max
-                )  # health
-                enemy_state[e_id, 1] = (
-                    x - center_x
-                ) / self.max_distance_x  # relative X
-                enemy_state[e_id, 2] = (
-                    y - center_y
-                ) / self.max_distance_y  # relative Y
+    #             enemy_state[e_id, 0] = (
+    #                 e_unit.health / e_unit.health_max
+    #             )  # health
+    #             enemy_state[e_id, 1] = (
+    #                 x - center_x
+    #             ) / self.max_distance_x  # relative X
+    #             enemy_state[e_id, 2] = (
+    #                 y - center_y
+    #             ) / self.max_distance_y  # relative Y
 
-                ind = 3
-                if self.shield_bits_enemy > 0:
-                    max_shield = self.unit_max_shield(e_unit)
-                    enemy_state[e_id, ind] = (
-                        e_unit.shield / max_shield
-                    )  # shield
-                    ind += 1
+    #             ind = 3
+    #             if self.shield_bits_enemy > 0:
+    #                 max_shield = self.unit_max_shield(e_unit)
+    #                 enemy_state[e_id, ind] = (
+    #                     e_unit.shield / max_shield
+    #                 )  # shield
+    #                 ind += 1
 
-                if self.unit_type_bits > 0:
-                    type_id = self.get_unit_type_id(e_unit, False)
-                    enemy_state[e_id, ind + type_id] = 1
+    #             if self.unit_type_bits > 0:
+    #                 type_id = self.get_unit_type_id(e_unit, False)
+    #                 enemy_state[e_id, ind + type_id] = 1
 
-        state = np.append(ally_state.flatten(), enemy_state.flatten())
-        if self.state_last_action:
-            state = np.append(state, self.last_action.flatten())
-        if self.state_timestep_number:
-            state = np.append(state,
-                              self._episode_steps / self.episode_limit)
+    #     state = np.append(ally_state.flatten(), enemy_state.flatten())
+    #     if self.state_last_action:
+    #         state = np.append(state, self.last_action.flatten())
+    #     if self.state_timestep_number:
+    #         state = np.append(state,
+    #                           self._episode_steps / self.episode_limit)
 
-        state = state.astype(dtype=np.float32)
+    #     state = state.astype(dtype=np.float32)
 
-        if self.debug:
-            logging.debug("STATE".center(60, "-"))
-            logging.debug("Ally state {}".format(ally_state))
-            logging.debug("Enemy state {}".format(enemy_state))
-            if self.state_last_action:
-                logging.debug("Last actions {}".format(self.last_action))
+    #     if self.debug:
+    #         logging.debug("STATE".center(60, "-"))
+    #         logging.debug("Ally state {}".format(ally_state))
+    #         logging.debug("Enemy state {}".format(enemy_state))
+    #         if self.state_last_action:
+    #             logging.debug("Last actions {}".format(self.last_action))
 
-        return state
+    #     return state
 
     def get_obs_enemy_feats_size(self):
         """ Returns the dimensions of the matrix containing enemy features.

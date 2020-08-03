@@ -523,9 +523,7 @@ class StarCraft2EnvMulti(StarCraft2Env):
                     delta_deaths_enemy += self.reward_death_value
                 else:
                     # still alive
-                    delta_ally += neg_scale * (
-                        prev_health - al_unit.health - al_unit.shield
-                    )
+                    delta_ally += neg_scale * (prev_health - al_unit.health - al_unit.shield)
 
         for e_id, e_unit in self.enemies.items():
             if not self.death_tracker_enemy[e_id]:
@@ -543,8 +541,7 @@ class StarCraft2EnvMulti(StarCraft2Env):
                     delta_deaths_ally += self.reward_death_value
                 else:
                     # still alive
-                    delta_enemy += neg_scale * (
-                            prev_health - e_unit.health - e_unit.shield)
+                    delta_enemy += neg_scale * (prev_health - e_unit.health - e_unit.shield)
 
         if self.reward_only_positive:
             reward.append(abs(delta_enemy + delta_deaths_ally)) # shield regeneration
@@ -765,7 +762,11 @@ class StarCraft2EnvMulti(StarCraft2Env):
                       range(self.n_agents + self.n_enemies)]
         return agents_obs
 
+
     def get_state(self):
+        return self.get_state_team_1(), self.get_state_team_2()
+ 
+    def get_state_team_1(self):
         """Returns the global state.
         NOTE: This functon should not be used during decentralised execution.
         """
@@ -776,7 +777,7 @@ class StarCraft2EnvMulti(StarCraft2Env):
             return obs_concat
 
         nf_al = 4 + self.shield_bits_ally + self.unit_type_bits
-        nf_en = 4 + self.shield_bits_enemy + self.unit_type_bits
+        nf_en = 3 + self.shield_bits_enemy + self.unit_type_bits
 
         ally_state = np.zeros((self.n_agents, nf_al))
         enemy_state = np.zeros((self.n_enemies, nf_en))
@@ -802,16 +803,19 @@ class StarCraft2EnvMulti(StarCraft2Env):
                     ally_state[al_id, 1] = (
                         al_unit.weapon_cooldown / max_cd
                     )  # cooldown
-                # relative X
-                ally_state[al_id, 2] = (x - center_x) / self.max_distance_x
-                # relative Y
-                ally_state[al_id, 3] = (y - center_y) / self.max_distance_y
+                ally_state[al_id, 2] = (
+                    x - center_x
+                ) / self.max_distance_x  # relative X
+                ally_state[al_id, 3] = (
+                    y - center_y
+                ) / self.max_distance_y  # relative Y
 
                 ind = 4
                 if self.shield_bits_ally > 0:
                     max_shield = self.unit_max_shield(al_unit)
-                    # shield
-                    ally_state[al_id, ind] = (al_unit.shield / max_shield)
+                    ally_state[al_id, ind] = (
+                        al_unit.shield / max_shield
+                    )  # shield
                     ind += 1
 
                 if self.unit_type_bits > 0:
@@ -822,27 +826,23 @@ class StarCraft2EnvMulti(StarCraft2Env):
             if e_unit.health > 0:
                 x = e_unit.pos.x
                 y = e_unit.pos.y
-                max_cd = self.unit_max_cooldown(e_unit)
 
-                # health
-                enemy_state[e_id, 0] = (e_unit.health / e_unit.health_max)
-                if (self.map_type == "MMM"
-                        and e_unit.unit_type == self.medivac_id):
-                    # energy
-                    enemy_state[e_id, 1] = e_unit.energy / max_cd
-                else:
-                    # cooldown
-                    enemy_state[e_id, 1] = (e_unit.weapon_cooldown / max_cd)
-                # relative X
-                enemy_state[e_id, 2] = (x - center_x) / self.max_distance_x
-                # relative Y
-                enemy_state[e_id, 3] = (y - center_y) / self.max_distance_y
+                enemy_state[e_id, 0] = (
+                    e_unit.health / e_unit.health_max
+                )  # health
+                enemy_state[e_id, 1] = (
+                    x - center_x
+                ) / self.max_distance_x  # relative X
+                enemy_state[e_id, 2] = (
+                    y - center_y
+                ) / self.max_distance_y  # relative Y
 
-                ind = 4
+                ind = 3
                 if self.shield_bits_enemy > 0:
                     max_shield = self.unit_max_shield(e_unit)
-                    # shield
-                    enemy_state[e_id, ind] = (e_unit.shield / max_shield)
+                    enemy_state[e_id, ind] = (
+                        e_unit.shield / max_shield
+                    )  # shield
                     ind += 1
 
                 if self.unit_type_bits > 0:
@@ -850,28 +850,124 @@ class StarCraft2EnvMulti(StarCraft2Env):
                     enemy_state[e_id, ind + type_id] = 1
 
         state = np.append(ally_state.flatten(), enemy_state.flatten())
-        state_enemy = np.append(enemy_state.flatten(), ally_state.flatten())
         if self.state_last_action:
-            state = np.append(state, self.last_action.flatten())
-            last_action_opposite = np.concatenate((self.last_action[self.n_agents:, :],
-                                                  self.last_action[:self.n_agents,
-                                                  :])).flatten()
-            state_enemy = np.append(state_enemy, last_action_opposite.flatten())
+            state = np.append(state, self.last_action[:self.n_agents, :].flatten())
         if self.state_timestep_number:
             state = np.append(state,
                               self._episode_steps / self.episode_limit)
-            state_enemy = np.append(state_enemy,
-                                    self._episode_steps / self.episode_limit)
+
         state = state.astype(dtype=np.float32)
-        state_enemy = state_enemy.astype(dtype=np.float32)
 
         if self.debug:
             logging.debug("STATE".center(60, "-"))
-            logging.debug("Ally state {}".format(ally_state))
-            logging.debug("Enemy state {}".format(enemy_state))
+            logging.debug("Ally state for Team 1 {}".format(ally_state))
+            logging.debug("Enemy state for Team 1 {}".format(enemy_state))
+            logging.debug("State for Team 1 {}".format(state))
             if self.state_last_action:
                 logging.debug("Last actions {}".format(self.last_action))
-        return state, state_enemy
+        return state
+ 
+    def get_state_team_2(self):
+        """Returns the global state.
+        NOTE: This functon should not be used during decentralised execution.
+        """
+        if self.obs_instead_of_state:
+            obs_concat = np.concatenate(self.get_obs(), axis=0).astype(
+                np.float32
+            )
+            return obs_concat
+
+        nf_al = 3 + self.shield_bits_ally + self.unit_type_bits
+        nf_en = 4 + self.shield_bits_enemy + self.unit_type_bits
+
+        ally_state = np.zeros((self.n_agents, nf_al))
+        enemy_state = np.zeros((self.n_enemies, nf_en))
+
+        center_x = self.map_x / 2
+        center_y = self.map_y / 2
+
+        for e_id, e_unit in self.enemies.items():
+            if e_unit.health > 0:
+                x = e_unit.pos.x
+                y = e_unit.pos.y
+                max_cd = self.unit_max_cooldown(e_unit)
+
+                enemy_state[e_id, 0] = (
+                    e_unit.health / e_unit.health_max
+                )  # health
+                if (
+                    self.map_type == "MMM"
+                    and e_unit.unit_type == self.medivac_id
+                ):
+                    ely_state[e_id, 1] = e_unit.energy / max_cd  # energy
+                else:
+                    enemy_state[e_id, 1] = (
+                        e_unit.weapon_cooldown / max_cd
+                    )  # cooldown
+                enemy_state[e_id, 2] = (
+                    x - center_x
+                ) / self.max_distance_x  # relative X
+                enemy_state[e_id, 3] = (
+                    y - center_y
+                ) / self.max_distance_y  # relative Y
+
+                ind = 4
+                if self.shield_bits_enemy > 0:
+                    max_shield = self.unit_max_shield(e_unit)
+                    enemy_state[e_id, ind] = (
+                        e_unit.shield / max_shield
+                    )  # shield
+                    ind += 1
+
+                if self.unit_type_bits > 0:
+                    type_id = self.get_unit_type_id(e_unit, True)
+                    enemy_state[e_id, ind + type_id] = 1
+
+        for al_id, al_unit in self.agents.items():
+            if al_unit.health > 0:
+                x = al_unit.pos.x
+                y = al_unit.pos.y
+
+                ally_state[al_id, 0] = (
+                    al_unit.health / al_unit.health_max
+                )  # health
+                ally_state[al_id, 1] = (
+                    x - center_x
+                ) / self.max_distance_x  # relative X
+                ally_state[al_id, 2] = (
+                    y - center_y
+                ) / self.max_distance_y  # relative Y
+
+                ind = 3
+                if self.shield_bits_ally > 0:
+                    max_shield = self.unit_max_shield(al_unit)
+                    ally_state[al_id, ind] = (
+                        al_unit.shield / max_shield
+                    )  # shield
+                    ind += 1
+
+                if self.unit_type_bits > 0:
+                    type_id = self.get_unit_type_id(al_unit, False)
+                    ally_state[al_id, ind + type_id] = 1
+
+        state = np.append(enemy_state.flatten(), ally_state.flatten())
+        if self.state_last_action:
+            state = np.append(state, self.last_action[self.n_agents:, :].flatten())
+        if self.state_timestep_number:
+            state = np.append(state,
+                              self._episode_steps / self.episode_limit)
+
+        state = state.astype(dtype=np.float32)
+
+        if self.debug:
+            logging.debug("STATE".center(60, "-"))
+            logging.debug("Ally state for Team 2 {}".format(ally_state))
+            logging.debug("Enemy state for Team 2 {}".format(enemy_state))
+            logging.debug("State for Team 2  {}".format(state))
+            if self.state_last_action:
+                logging.debug("Last actions {}".format(self.last_action))
+
+        return state
 
     def get_obs_size(self):
         """
@@ -898,14 +994,17 @@ class StarCraft2EnvMulti(StarCraft2Env):
         return size_for_all - nf_al + (self.n_agents - 1) * last_action_feats, \
                size_for_all - nf_en + (self.n_enemies - 1) * last_action_feats
 
-
     def get_state_size(self):
+        return self.get_state_size_team_1(), self.get_state_size_team_2()
+
+
+    def get_state_size_team_1(self):
         """Returns the size of the global state."""
         if self.obs_instead_of_state:
             return self.get_obs_size() * self.n_agents
 
         nf_al = 4 + self.shield_bits_ally + self.unit_type_bits
-        nf_en = 4 + self.shield_bits_enemy + self.unit_type_bits
+        nf_en = 3 + self.shield_bits_enemy + self.unit_type_bits
 
         enemy_state = self.n_enemies * nf_en
         ally_state = self.n_agents * nf_al
@@ -914,11 +1013,31 @@ class StarCraft2EnvMulti(StarCraft2Env):
 
         if self.state_last_action:
             size += self.n_agents * self.n_actions
+        if self.state_timestep_number:
+            size += 1
+
+        return size
+
+        # trying copy from starcraft2.py   
+    def get_state_size_team_2(self):
+        """Returns the size of the global state."""
+        if self.obs_instead_of_state:
+            return self.get_obs_size() * self.n_enemies
+
+        nf_al = 3 + self.shield_bits_ally + self.unit_type_bits
+        nf_en = 4 + self.shield_bits_enemy + self.unit_type_bits
+
+        enemy_state = self.n_enemies * nf_en
+        ally_state = self.n_agents * nf_al
+
+        size = enemy_state + ally_state
+
+        if self.state_last_action:
             size += self.n_enemies * self.n_actions
         if self.state_timestep_number:
             size += 1
 
-        return 2, size
+        return size
 
     def get_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id."""
